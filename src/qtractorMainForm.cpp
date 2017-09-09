@@ -1317,11 +1317,12 @@ void qtractorMainForm::setup ( qtractorOptions *pOptions )
 	}
 	// Other child/tools forms are also created right away...
 	m_pConnections = new qtractorConnections(pParent, wflags);
-	m_pMixer = new qtractorMixer(pParent, wflags);
+    m_pMixer = new qtractorMixer(this);
 
 	// Make those primordially docked...
 	addDockWidget(Qt::RightDockWidgetArea, m_pFiles, Qt::Vertical);
 	addDockWidget(Qt::BottomDockWidgetArea, m_pMessages, Qt::Horizontal);
+    addDockWidget(Qt::BottomDockWidgetArea, m_pMixer, Qt::Horizontal);
 
 	// Time to create the main session track list view...
 	m_pTracks = new qtractorTracks(this);

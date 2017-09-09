@@ -117,7 +117,7 @@ void qtractorMonitorButton::setBus ( qtractorBus *pBus )
 {
 	m_pBus = pBus;
 	m_pTrack = NULL;
-	
+
 	QPushButton::setToolTip(tr("Monitor (thru)"));
 
 	updateMonitor(); // Visitor setup.
@@ -165,7 +165,7 @@ void qtractorMonitorButton::updateMonitor (void)
 			addMidiControlAction(m_pBus->monitorObserver());
 			QPushButton::setEnabled(true);
 		} else {
-			QPushButton::setEnabled(false);				
+			QPushButton::setEnabled(false);
 		}
 	}
 
@@ -207,7 +207,7 @@ private:
 	QIcon m_icon;
 };
 
-	
+
 //----------------------------------------------------------------------------
 // qtractorMixerStrip -- Mixer strip widget.
 
@@ -352,7 +352,7 @@ void qtractorMixerStrip::initMixerStrip (void)
 
 	m_pLayout->addWidget(m_pMonitorButton);
 	m_pLayout->addLayout(m_pButtonLayout);
-	
+
 	// Now, there's whether we are Audio or MIDI related...
 	m_pMeter = NULL;
 	m_pMidiLabel = NULL;
@@ -458,7 +458,7 @@ void qtractorMixerStrip::initMixerStrip (void)
 		if (m_pTrack)
 			pMidiObserver->setCurveList(m_pTrack->curveList());
 		m_pMeter->addMidiControlAction(m_pMeter->gainSlider(), pMidiObserver);
-		// Finally, add to layout...	
+		// Finally, add to layout...
 		m_pLayout->addWidget(m_pMeter, 4);
 		QObject::connect(m_pMeter->panSlider(),
 			SIGNAL(valueChanged(float)),
@@ -628,7 +628,7 @@ void qtractorMixerStrip::setBus ( qtractorBus *pBus )
 	default:
 		break;
 	}
-	
+
 	m_pMonitorButton->setBus(m_pBus);
 
 	updateName();
@@ -1126,7 +1126,7 @@ void qtractorMixerRack::updateStrip (
 	qtractorMonitor *pOldMonitor = pStrip->meter()->monitor();
 	if (findStrip(pOldMonitor) == pStrip)
 		m_strips.remove(pOldMonitor);
-	
+
 	pStrip->setMonitor(pMonitor);
 
 	if (pMonitor)
@@ -1261,33 +1261,46 @@ void qtractorMixerRack::busPropertiesSlot (void)
 // qtractorMixer -- Mixer widget.
 
 // Constructor.
-qtractorMixer::qtractorMixer ( QWidget *pParent, Qt::WindowFlags wflags )
-	: QMainWindow(pParent, wflags)
+qtractorMixer::qtractorMixer ( QWidget *pParent )
+	: QDockWidget(pParent)
 {
 	// Surely a name is crucial (e.g. for storing geometry settings)
-	QMainWindow::setObjectName("qtractorMixer");
+	QDockWidget::setObjectName("qtractorMixer");
 
 	m_pInputRack  = new qtractorMixerRack(this, tr("Inputs"));
 	m_pTrackRack  = new qtractorMixerRack(this, tr("Tracks"));
 	m_pTrackRack->setSelectEnabled(true);
 	m_pOutputRack = new qtractorMixerRack(this, tr("Outputs"));
 
+	m_pLayout = new QHBoxLayout();
+	m_pLayout->setMargin(0);
+	m_pLayout->setSpacing(2);
+	m_pLayout->addWidget(m_pInputRack);
+	m_pLayout->addWidget(m_pTrackRack);
+	m_pLayout->addWidget(m_pOutputRack);
+
+	m_pMixerWidget = new QWidget(this);
+	m_pMixerWidget->setSizePolicy(
+		QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred));
+	m_pMixerWidget->setLayout(m_pLayout);
+
+	// Prepare the dockable window stuff.
+	QDockWidget::setFeatures(QDockWidget::AllDockWidgetFeatures);
+	QDockWidget::setAllowedAreas(
+		Qt::TopDockWidgetArea | Qt::BottomDockWidgetArea);
 	// Some specialties to this kind of dock window...
-	QMainWindow::setMinimumWidth(480);
-	QMainWindow::setMinimumHeight(320);
+	QDockWidget::setMinimumHeight(320);
+
+	QDockWidget::setWidget(m_pMixerWidget);
 
 	// Finally set the default caption and tooltip.
 	const QString& sCaption = tr("Mixer") + " - " QTRACTOR_TITLE;
-	QMainWindow::setWindowTitle(sCaption);
-	QMainWindow::setWindowIcon(QIcon(":/images/viewMixer.png"));
-	QMainWindow::setToolTip(sCaption);
-
-	QMainWindow::addDockWidget(Qt::LeftDockWidgetArea,  m_pInputRack);
-	QMainWindow::addDockWidget(Qt::RightDockWidgetArea, m_pOutputRack);
+	QDockWidget::setTitleBarWidget(new QWidget());
+	QDockWidget::setWindowIcon(QIcon(":/images/viewMixer.png"));
+	QDockWidget::setToolTip(sCaption);
 
 	m_pTrackRack->setFeatures(QDockWidget::NoDockWidgetFeatures);
 	m_pTrackRack->setAllowedAreas(Qt::NoDockWidgetArea);
-	QMainWindow::setCentralWidget(m_pTrackRack);
 
 	// Get previously saved splitter sizes...
 	loadMixerState();
@@ -1298,33 +1311,11 @@ qtractorMixer::qtractorMixer ( QWidget *pParent, Qt::WindowFlags wflags )
 qtractorMixer::~qtractorMixer (void)
 {
 	// Save splitter sizes...
-	if (QMainWindow::isVisible())
+	if (QDockWidget::isVisible())
 		saveMixerState();
 
 	// No need to delete child widgets, Qt does it all for us
 }
-
-
-// Notify the main application widget that we're emerging.
-void qtractorMixer::showEvent ( QShowEvent *pShowEvent )
-{
-	qtractorMainForm *pMainForm = qtractorMainForm::getInstance();
-	if (pMainForm)
-		pMainForm->stabilizeForm();
-
-	QMainWindow::showEvent(pShowEvent);
-}
-
-// Notify the main application widget that we're closing.
-void qtractorMixer::hideEvent ( QHideEvent *pHideEvent )
-{
-	QMainWindow::hideEvent(pHideEvent);
-	
-	qtractorMainForm *pMainForm = qtractorMainForm::getInstance();
-	if (pMainForm)
-		pMainForm->stabilizeForm();
-}
-
 
 // Just about to notify main-window that we're closing.
 void qtractorMixer::closeEvent ( QCloseEvent * /*pCloseEvent*/ )
@@ -1332,13 +1323,12 @@ void qtractorMixer::closeEvent ( QCloseEvent * /*pCloseEvent*/ )
 	// Save splitter sizes...
 	saveMixerState();
 
-	QMainWindow::hide();
+	QDockWidget::hide();
 
 	qtractorMainForm *pMainForm = qtractorMainForm::getInstance();
 	if (pMainForm)
 		pMainForm->stabilizeForm();
 }
-
 
 // Get previously saved dockable state...
 void qtractorMixer::loadMixerState (void)
@@ -1349,8 +1339,6 @@ void qtractorMixer::loadMixerState (void)
 		settings.beginGroup("Mixer");
 		const QByteArray& aDockables
 			= pOptions->settings().value("/Layout/DockWindows").toByteArray();
-		if (!aDockables.isEmpty())
-			QMainWindow::restoreState(aDockables);
 		settings.endGroup();
 	}
 }
@@ -1363,7 +1351,7 @@ void qtractorMixer::saveMixerState (void)
 	if (pOptions) {
 		QSettings& settings = pOptions->settings();
 		settings.beginGroup("Mixer");
-		settings.setValue("/Layout/DockWindows", QMainWindow::saveState());
+		// settings.setValue("/Layout/DockWindows", QMainWindow::saveState());
 		settings.endGroup();
 	}
 }
@@ -1451,7 +1439,7 @@ void qtractorMixer::updateBuses ( bool bReset )
 
 	if (bReset) {
 		m_pInputRack->clear();
-		m_pOutputRack->clear();		
+		m_pOutputRack->clear();
 	}
 
 	m_pInputRack->markStrips(1);
@@ -1527,24 +1515,4 @@ void qtractorMixer::updateWorkspaces (void)
 	m_pOutputRack->updateWorkspace();
 }
 
-
-// Keyboard event handler.
-void qtractorMixer::keyPressEvent ( QKeyEvent *pKeyEvent )
-{
-#ifdef CONFIG_DEBUG_0
-	qDebug("qtractorMixer::keyPressEvent(%d)", pKeyEvent->key());
-#endif
-	const int iKey = pKeyEvent->key();
-	switch (iKey) {
-	case Qt::Key_Escape:
-		close();
-		break;
-	default:
-		QMainWindow::keyPressEvent(pKeyEvent);
-		break;
-	}
-}
-
-
 // end of qtractorMixer.cpp
-

@@ -26,7 +26,6 @@
 
 #include "qtractorTrackButton.h"
 
-#include <QMainWindow>
 #include <QDockWidget>
 #include <QScrollArea>
 #include <QFrame>
@@ -362,14 +361,14 @@ private:
 //----------------------------------------------------------------------------
 // qtractorMixer -- Mixer widget.
 
-class qtractorMixer : public QMainWindow
+class qtractorMixer : public QDockWidget
 {
 	Q_OBJECT
 
 public:
 
 	// Constructor.
-	qtractorMixer(QWidget *pParent, Qt::WindowFlags wflags = 0);
+	qtractorMixer(QWidget *pParent);
 	// Default destructor.
 	~qtractorMixer();
 
@@ -401,15 +400,8 @@ public:
 
 protected:
 
-	// Notify the main application widget that we're closing.
-	void showEvent(QShowEvent *);
-	void hideEvent(QHideEvent *);
-
 	// Just about to notify main-window that we're closing.
 	void closeEvent(QCloseEvent *);
-
-	// Keyboard event handler.
-	void keyPressEvent(QKeyEvent *);
 
 	// Special dockables persistence methods.
 	void loadMixerState();
@@ -421,6 +413,8 @@ protected:
 
 private:
 
+	QHBoxLayout       *m_pLayout;
+	QWidget						*m_pMixerWidget;
 	qtractorMixerRack *m_pInputRack;
 	qtractorMixerRack *m_pTrackRack;
 	qtractorMixerRack *m_pOutputRack;
@@ -430,4 +424,3 @@ private:
 #endif  // __qtractorMixer_h
 
 // end of qtractorMixer.h
-
